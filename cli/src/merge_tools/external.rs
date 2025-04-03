@@ -16,6 +16,7 @@ use jj_lib::conflicts::choose_materialized_conflict_marker_len;
 use jj_lib::conflicts::materialize_merge_result_to_bytes_with_marker_len;
 use jj_lib::conflicts::ConflictMarkerStyle;
 use jj_lib::conflicts::MIN_CONFLICT_MARKER_LEN;
+use jj_lib::gitattributes::GitAttributesFile;
 use jj_lib::gitignore::GitIgnoreFile;
 use jj_lib::matchers::Matcher;
 use jj_lib::merge::Merge;
@@ -378,6 +379,7 @@ pub fn edit_diff_external(
     matcher: &dyn Matcher,
     instructions: Option<&str>,
     base_ignores: Arc<GitIgnoreFile>,
+    base_attributes: Arc<GitAttributesFile>,
     default_conflict_marker_style: ConflictMarkerStyle,
 ) -> Result<MergedTreeId, DiffEditError> {
     let conflict_marker_style = editor
@@ -415,7 +417,7 @@ pub fn edit_diff_external(
         }));
     }
 
-    diffedit_wc.snapshot_results(base_ignores, options.conflict_marker_style)
+    diffedit_wc.snapshot_results(base_ignores, base_attributes, options.conflict_marker_style)
 }
 
 /// Generates textual diff by the specified `tool` and writes into `writer`.

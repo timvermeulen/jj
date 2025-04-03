@@ -70,6 +70,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Evolution history is now stored in the operation log. `jj evolog` can show
   associated operations for commits created by new jj.
 
+* Added `git.ignore-filters` setting to specify what filtered files in
+  `.gitattributes` are ignored by `jj`. Defaults to `["lfs"]`.
+
 ### Fixed bugs
 
 * Work around a git issue that could cause subprocess operations to hang if the

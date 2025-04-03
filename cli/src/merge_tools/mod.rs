@@ -28,6 +28,7 @@ use jj_lib::config::ConfigNamePathBuf;
 use jj_lib::conflicts::try_materialize_file_conflict_value;
 use jj_lib::conflicts::ConflictMarkerStyle;
 use jj_lib::conflicts::MaterializedFileConflictValue;
+use jj_lib::gitattributes::GitAttributesFile;
 use jj_lib::gitignore::GitIgnoreFile;
 use jj_lib::matchers::Matcher;
 use jj_lib::merge::Merge;
@@ -227,6 +228,7 @@ pub fn get_external_tool_config(
 pub struct DiffEditor {
     tool: DiffTool,
     base_ignores: Arc<GitIgnoreFile>,
+    base_attributes: Arc<GitAttributesFile>,
     use_instructions: bool,
     conflict_marker_style: ConflictMarkerStyle,
 }
@@ -238,11 +240,18 @@ impl DiffEditor {
         name: &str,
         settings: &UserSettings,
         base_ignores: Arc<GitIgnoreFile>,
+        base_attributes: Arc<GitAttributesFile>,
         conflict_marker_style: ConflictMarkerStyle,
     ) -> Result<Self, MergeToolConfigError> {
         let tool = DiffTool::get_tool_config(settings, name)?
             .unwrap_or_else(|| DiffTool::external(ExternalMergeTool::with_program(name)));
-        Self::new_inner(tool, settings, base_ignores, conflict_marker_style)
+        Self::new_inner(
+            tool,
+            settings,
+            base_ignores,
+            base_attributes,
+            conflict_marker_style,
+        )
     }
 
     /// Loads the default diff editor from the settings.
@@ -250,6 +259,7 @@ impl DiffEditor {
         ui: &Ui,
         settings: &UserSettings,
         base_ignores: Arc<GitIgnoreFile>,
+        base_attributes: Arc<GitAttributesFile>,
         conflict_marker_style: ConflictMarkerStyle,
     ) -> Result<Self, MergeToolConfigError> {
         let args = editor_args_from_settings(ui, settings, "ui.diff-editor")?;
@@ -259,18 +269,26 @@ impl DiffEditor {
             None
         }
         .unwrap_or_else(|| DiffTool::external(ExternalMergeTool::with_edit_args(&args)));
-        Self::new_inner(tool, settings, base_ignores, conflict_marker_style)
+        Self::new_inner(
+            tool,
+            settings,
+            base_ignores,
+            base_attributes,
+            conflict_marker_style,
+        )
     }
 
     fn new_inner(
         tool: DiffTool,
         settings: &UserSettings,
         base_ignores: Arc<GitIgnoreFile>,
+        base_attributes: Arc<GitAttributesFile>,
         conflict_marker_style: ConflictMarkerStyle,
     ) -> Result<Self, MergeToolConfigError> {
         Ok(DiffEditor {
             tool,
             base_ignores,
+            base_attributes,
             use_instructions: settings.get_bool("ui.diff-instructions")?,
             conflict_marker_style,
         })
@@ -307,6 +325,7 @@ impl DiffEditor {
                     matcher,
                     instructions.as_deref(),
                     self.base_ignores.clone(),
+                    self.base_attributes.clone(),
                     self.conflict_marker_style,
                 )
             }
@@ -496,6 +515,7 @@ mod tests {
                 name,
                 &settings,
                 GitIgnoreFile::empty(),
+                Arc::new(GitAttributesFile::default()),
                 ConflictMarkerStyle::Diff,
             )
             .map(|editor| editor.tool)
@@ -573,6 +593,7 @@ mod tests {
                 &ui,
                 &settings,
                 GitIgnoreFile::empty(),
+                Arc::new(GitAttributesFile::default()),
                 ConflictMarkerStyle::Diff,
             )
             .map(|editor| editor.tool)
