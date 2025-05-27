@@ -19,7 +19,6 @@ use gix::glob as gix_glob;
 use gix::path as gix_path;
 use std::borrow::Cow;
 use std::io;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use thiserror::Error;
@@ -79,29 +78,11 @@ impl GitAttributesFile {
         file: PathBuf,
     ) -> Result<Arc<GitAttributesFile>, GitAttributesError> {
         if file.is_file() {
-            let mut buf = Vec::new();
-            let mut search = self.search.clone();
-            let mut collection = self.collection.clone();
-            let ignore_filters = self.ignore_filters.clone();
-
-            search
-                .add_patterns_file(
-                    file.clone(),
-                    true,
-                    Some(Path::new(prefix)),
-                    &mut buf,
-                    &mut collection,
-                    true,
-                )
-                .map_err(|err| GitAttributesError::ReadFile {
-                    path: file.clone(),
-                    source: err,
-                })?;
-            Ok(Arc::new(GitAttributesFile {
-                search,
-                collection,
-                ignore_filters,
-            }))
+            let input = std::fs::read(&file).map_err(|err| GitAttributesError::ReadFile {
+                path: file.clone(),
+                source: err,
+            })?;
+            self.chain(PathBuf::from(prefix), &input)
         } else {
             Ok(self.clone())
         }
